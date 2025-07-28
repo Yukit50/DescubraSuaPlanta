@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Descubra Sua Planta</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #FAFAFA;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    header h1 {
+      color: #4CAF50;
+      font-size: 2.5rem;
+    }
+    .upload-box {
+      border: 2px dashed #A1887F;
+      border-radius: 12px;
+      padding: 30px;
+      text-align: center;
+      background-color: #FFF;
+      width: 100%;
+      max-width: 400px;
+      margin-bottom: 30px;
+    }
+    .upload-box input[type="file"] {
+      display: none;
+    }
+    .upload-label {
+      background-color: #F9A825;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-block;
+      margin-top: 10px;
+    }
+    .preview {
+      margin-top: 20px;
+    }
+    .results {
+      display: none;
+      flex-direction: column;
+      gap: 20px;
+      margin-top: 30px;
+      max-width: 600px;
+      width: 100%;
+    }
+    .card {
+      background-color: #E8F5E9;
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .card h3 {
+      margin-top: 0;
+      color: #388E3C;
+    }
+    footer {
+      margin-top: 50px;
+      font-size: 0.9rem;
+      color: #888;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🌿 Descubra Sua Planta</h1>
+    <p>Envie uma foto e receba tudo sobre a sua planta!</p>
+  </header>
+
+  <div class="upload-box">
+    <label class="upload-label" for="upload">📷 Envie a foto da sua planta</label>
+    <input type="file" id="upload" accept="image/*" onchange="handleFile(event)" />
+    <div class="preview" id="preview"></div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="card">
+      <h3>🌱 Nome:</h3>
+      <p id="plant-name">Carregando...</p>
+    </div>
+    <div class="card">
+      <h3> Descrição:</h3>
+      <p id="plant-location">Carregando...</p>
+    </div>
+    <div class="card">
+      <h3>💧 Como cuidar:</h3>
+      <p id="plant-care">Carregando...</p>
+    </div>
+  </div>
+
+  <footer>
+    🌺 Inspirado na biodiversidade do Brasil 🌎
+  </footer>
+
+  <script>
+    async function handleFile(event) {
+      const file = event.target.files[0];
+      const preview = document.getElementById("preview");
+      const results = document.getElementById("results");
+
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+          preview.innerHTML = `<img src="${e.target.result}" alt="Pré-visualização" style="max-width:100%; border-radius: 12px; margin-top: 20px;" />`;
+
+          const base64Image = e.target.result.split(",")[1];
+          try {
+            const response = await fetch("https://api.plant.id/v2/identify", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Api-Key": "n5GXsNtuaPKGMLKROgcI4xtGQnfzplH7CGzC9fyHjGDy7MaUec"
+              },
+              body: JSON.stringify({
+                images: [base64Image],
+                modifiers: ["crops_fast", "similar_images"],
+                plant_language: "pt",
+                plant_details: ["common_names", "url", "wiki_description", "value", "taxonomy", "watering", "growth_rate", "edible_parts", "propagation_methods"]
+              })
+            });
+            const data = await response.json();
+            const plant = data?.suggestions?.[0];
+            if (plant) {
+              document.getElementById("plant-name").textContent = plant.plant_name + " (" + (plant?.plant_details?.common_names?.[0] || "Nome popular não encontrado") + ")" +
+  " - " + (plant?.probability * 100).toFixed(1) + "% de certeza";
+              document.getElementById("plant-location").textContent = plant?.plant_details?.wiki_description?.value || "Informação não disponível";
+              document.getElementById("plant-care").textContent = plant?.plant_details?.watering || "Rega não especificada";
+              results.style.display = 'flex';
+            } else {
+              document.getElementById("plant-name").textContent = "Planta não identificada.";
+            }
+          } catch (error) {
+            console.error("Erro na identificação:", error);
+            document.getElementById("plant-name").textContent = "Erro ao identificar a planta.";
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  </script>
+</body>
+</html>
